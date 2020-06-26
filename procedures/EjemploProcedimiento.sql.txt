@@ -1,0 +1,109 @@
+CREATE DATABASE johnEjemplo;
+USE johnEjemplo;
+
+CREATE TABLE Clientes (
+	DNI VARCHAR(20) NOT NULL,
+	Apellidos VARCHAR(20) NOT NULL,
+	Nombre VARCHAR(20) NOT NULL,
+	Direccion VARCHAR(50) NOT NULL,
+	Telefono VARCHAR(20) NOT NULL,
+	Telefono2 VARCHAR(20) NOT NULL,
+	PRIMARY KEY (DNI)
+);
+
+CREATE TABLE Coches (
+	Matricula VARCHAR(20) NOT NULL,
+	DNIPropietario VARCHAR(20) NOT NULL,
+	Marca VARCHAR(20) NOT NULL,
+	Modelo VARCHAR(15) NOT NULL,
+	Color VARCHAR(15) NOT NULL,
+	Km INT NOT NULL,
+	PRIMARY KEY (Matricula),
+	FOREIGN KEY (DNIPropietario) REFERENCES Clientes (DNI)
+);
+
+CREATE TABLE Reparaciones (
+	NumReparacion INT NOT NULL,
+	Matricula VARCHAR(20) NOT NULL,
+	Descripcion VARCHAR(100) NOT NULL,
+	FechaEntrada DATETIME NOT NULL,
+	FechaSalida DATETIME NOT NULL,
+	Horas INT NOT NULL,
+	PRIMARY KEY (NumReparacion),
+	FOREIGN KEY (Matricula) REFERENCES Coches (Matricula)
+);
+
+CREATE TABLE Piezas (
+	Referencia INT NOT NULL,
+	Descripcion VARCHAR(100) NOT NULL,
+	Precio MONEY NOT NULL,
+	Stock INT NOT NULL,
+	PRIMARY KEY (Referencia)
+);
+
+CREATE TABLE DetallesReparacion (
+	NumReparacion INT NOT NULL,
+	Referencia INT NOT NULL,
+	Unidades INT NOT NULL,
+	FOREIGN KEY (NumReparacion) REFERENCES Reparaciones (NumReparacion),
+	FOREIGN KEY (Referencia) REFERENCES Piezas (Referencia)
+);
+
+GO
+-- 1.Procedimiento para guardar una reparación a traves del detalle
+CREATE PROCEDURE spI_DetallesReparacion (
+    @NumReparacion INT,
+    @Referencia INT,
+	@Unidades INT
+) AS
+BEGIN
+	INSERT INTO DetallesReparacion VALUES (@NumReparacion, @Referencia, @Unidades);
+END;
+GO
+
+-- 2.Procedimiento para mostrar detalles del coche con el número de reparación
+CREATE PROCEDURE spF_CocheNumReparacion (
+	@NumReparacion INT
+) AS
+BEGIN
+	SELECT
+		c.Matricula AS Matricula,
+		c.DNIPropietario AS DNI,
+		c.Marca AS Marca,
+		c.Modelo AS Modelo,
+		c.Color AS Color,
+		c.Km AS Km
+	FROM
+		Coches AS c INNER JOIN
+		Reparaciones AS r ON c.Matricula = r.Matricula
+	WHERE
+		r.NumReparacion = @NumReparacion
+END;
+GO
+
+-- Trigger para insertar reparaciones cuando se inserta un coche
+CREATE TRIGGER Insertar_Reparaciones ON Coches FOR INSERT AS
+BEGIN
+	DECLARE @NumReparacion INT
+	IF(SELECT MAX(NumReparacion) FROM Reparaciones) IS NOT NULL
+		SELECT @NumReparacion = ((SELECT MAX(NumReparacion)+1 FROM Reparaciones))
+	ELSE
+		SELECT @NumReparacion = 1
+    BEGIN
+		INSERT Reparaciones
+		SELECT @NumReparacion, INSERTED.Matricula, '', GETDATE(), GETDATE(), 0 FROM INSERTED
+    END
+END
+GO
+
+INSERT Clientes Values ('DNI1', 'APELLIDO1', 'NOMBRE1', 'DIRECCION', 'TELEFONO1', 'TELEFONO2');
+INSERT Piezas Values ('REFERENCIA1', 'DESCRIPCION', 10.00, 20);
+INSERT Coches Values ('MATRICULA5', 'DNI1', 'MARCA1', 'MODELO1', 'COLOR', 1000);
+
+SELECT * FROM Coches;
+SELECT * FROM Reparaciones;
+SELECT * FROM DetallesReparacion
+SELECT * FROM Piezas
+
+**  llene las tablas con datos válidos y utilice los procedimientos para interactuar con los datos   use : 
+exec   nombredel proc  param1 param2 etc.
